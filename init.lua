@@ -672,6 +672,7 @@ require('lazy').setup({
             workingDirectories = { mode = 'auto' },
           },
         },
+        sourcekit = {}, -- Swift LSP
       }
 
       -- Ensure the servers and tools above are installed
