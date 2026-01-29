@@ -21,8 +21,6 @@ return {
     'mason-org/mason.nvim',
     'jay-babu/mason-nvim-dap.nvim',
 
-    -- Add your own debuggers here
-    'leoluz/nvim-dap-go',
   },
   keys = {
     -- Basic debugging keymaps, feel free to change to your liking!
@@ -47,14 +45,34 @@ return {
       desc = 'Debug: Step Out',
     },
     {
-      '<leader>b',
+      '<leader>db',
       function() require('dap').toggle_breakpoint() end,
-      desc = 'Debug: Toggle Breakpoint',
+      desc = '[D]ebug: Toggle [B]reakpoint',
     },
     {
-      '<leader>B',
+      '<leader>dB',
       function() require('dap').set_breakpoint(vim.fn.input 'Breakpoint condition: ') end,
-      desc = 'Debug: Set Breakpoint',
+      desc = '[D]ebug: Set Conditional [B]reakpoint',
+    },
+    {
+      '<leader>dc',
+      function() require('dap').continue() end,
+      desc = '[D]ebug: [C]ontinue',
+    },
+    {
+      '<leader>di',
+      function() require('dap').step_into() end,
+      desc = '[D]ebug: Step [I]nto',
+    },
+    {
+      '<leader>do',
+      function() require('dap').step_over() end,
+      desc = '[D]ebug: Step [O]ver',
+    },
+    {
+      '<leader>du',
+      function() require('dapui').toggle() end,
+      desc = '[D]ebug: Toggle [U]I',
     },
     -- Toggle to see last session result. Without this, you can't see session output in case of unhandled exception.
     {
@@ -68,21 +86,41 @@ return {
     local dapui = require 'dapui'
 
     require('mason-nvim-dap').setup {
-      -- Makes a best effort to setup the various debuggers with
-      -- reasonable debug configurations
       automatic_installation = true,
-
-      -- You can provide additional configuration to the handlers,
-      -- see mason-nvim-dap README for more information
+      ensure_installed = { 'js' },
       handlers = {},
+    }
 
-      -- You'll need to check that you have the required things installed
-      -- online, please don't ask me how to install them :)
-      ensure_installed = {
-        -- Update this to ensure that you have the debuggers for the langs you want
-        'delve',
+    -- Register pwa-node adapter for JS/TS debugging (required by neotest-vitest)
+    dap.adapters['pwa-node'] = {
+      type = 'server',
+      host = 'localhost',
+      port = '${port}',
+      executable = {
+        command = 'js-debug-adapter',
+        args = { '${port}' },
       },
     }
+
+    -- Add JS/TS debug configurations
+    for _, language in ipairs { 'typescript', 'javascript', 'typescriptreact', 'javascriptreact' } do
+      dap.configurations[language] = {
+        {
+          type = 'pwa-node',
+          request = 'launch',
+          name = 'Launch file',
+          program = '${file}',
+          cwd = '${workspaceFolder}',
+        },
+        {
+          type = 'pwa-node',
+          request = 'attach',
+          name = 'Attach',
+          processId = require('dap.utils').pick_process,
+          cwd = '${workspaceFolder}',
+        },
+      }
+    end
 
     -- Dap UI setup
     -- For more information, see |:help nvim-dap-ui|
@@ -121,14 +159,5 @@ return {
     dap.listeners.after.event_initialized['dapui_config'] = dapui.open
     dap.listeners.before.event_terminated['dapui_config'] = dapui.close
     dap.listeners.before.event_exited['dapui_config'] = dapui.close
-
-    -- Install golang specific config
-    require('dap-go').setup {
-      delve = {
-        -- On Windows delve must be run attached or it crashes.
-        -- See https://github.com/leoluz/nvim-dap-go/blob/main/README.md#configuring
-        detached = vim.fn.has 'win32' == 0,
-      },
-    }
   end,
 }

@@ -90,8 +90,14 @@ P.S. You can delete this when you're done too. It's your config now! :)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
+-- VSCode Neovim: Load lightweight VSCode-specific config and exit early
+if vim.g.vscode then
+  require 'vscode'
+  return
+end
+
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.o`
@@ -102,7 +108,7 @@ vim.g.have_nerd_font = false
 vim.o.number = true
 -- You can also add relative line numbers, to help with jumping.
 --  Experiment for yourself to see if you like it!
--- vim.o.relativenumber = true
+vim.o.relativenumber = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.o.mouse = 'a'
@@ -170,6 +176,10 @@ vim.o.confirm = true
 -- Clear highlights on search when pressing <Esc> in normal mode
 --  See `:help hlsearch`
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
+
+-- Center cursor after scrolling
+vim.keymap.set('n', '<C-d>', '<C-d>zz', { desc = 'Scroll down and center' })
+vim.keymap.set('n', '<C-u>', '<C-u>zz', { desc = 'Scroll up and center' })
 
 -- Diagnostic Config & Keymaps
 -- See :help vim.diagnostic.Opts
@@ -257,6 +267,60 @@ rtp:prepend(lazypath)
 require('lazy').setup({
   -- NOTE: Plugins can be added via a link or github org/name. To run setup automatically, use `opts = {}`
   { 'NMAC427/guess-indent.nvim', opts = {} },
+
+  { -- Auto-save files
+    'okuuva/auto-save.nvim',
+    version = '^1.0.0',
+    cmd = 'ASToggle',
+    event = { 'InsertLeave', 'TextChanged' },
+    opts = {
+      trigger_events = {
+        immediate_save = { 'BufLeave', 'FocusLost' },
+        defer_save = { 'InsertLeave', 'TextChanged' },
+        cancel_deferred_save = { 'InsertEnter' },
+      },
+      debounce_delay = 2000,
+    },
+  },
+
+  { -- Auto-close and auto-rename HTML/JSX tags
+    'windwp/nvim-ts-autotag',
+    event = { 'InsertEnter' },
+    opts = {},
+  },
+
+  { -- GitHub Copilot
+    'github/copilot.vim',
+    event = 'InsertEnter',
+  },
+
+  { -- Test runner
+    'nvim-neotest/neotest',
+    dependencies = {
+      'nvim-neotest/nvim-nio',
+      'nvim-lua/plenary.nvim',
+      'antoinemadec/FixCursorHold.nvim',
+      'nvim-treesitter/nvim-treesitter',
+      'marilari88/neotest-vitest', -- Vitest adapter
+      'mfussenegger/nvim-dap',
+    },
+    keys = {
+      { '<leader>tt', function() require('neotest').run.run() end, desc = '[T]est nearest' },
+      { '<leader>td', function() require('neotest').run.run { strategy = 'dap' } end, desc = '[T]est [D]ebug nearest' },
+      { '<leader>tf', function() require('neotest').run.run(vim.fn.expand '%') end, desc = '[T]est [F]ile' },
+      { '<leader>ts', function() require('neotest').summary.toggle() end, desc = '[T]est [S]ummary' },
+      { '<leader>to', function() require('neotest').output.open { enter = true } end, desc = '[T]est [O]utput' },
+      { '<leader>tl', function() require('neotest').run.run_last() end, desc = '[T]est [L]ast' },
+      { '<leader>tw', function() require('neotest').watch.toggle(vim.fn.expand '%') end, desc = '[T]est [W]atch' },
+    },
+    config = function()
+      require('neotest').setup {
+        adapters = {
+          require 'neotest-vitest',
+        },
+      }
+    end,
+  },
 
   -- Alternatively, use `config = function() ... end` for full control over the configuration.
   -- If you prefer to call `setup` explicitly, use:
@@ -597,12 +661,17 @@ require('lazy').setup({
         -- gopls = {},
         -- pyright = {},
         -- rust_analyzer = {},
-        --
-        -- Some languages (like typescript) have entire language plugins that can be useful:
-        --    https://github.com/pmizio/typescript-tools.nvim
-        --
-        -- But for many setups, the LSP (`ts_ls`) will work just fine
-        -- ts_ls = {},
+
+        -- TypeScript/JavaScript
+        ts_ls = {},
+
+        -- ESLint
+        eslint = {
+          settings = {
+            -- helps eslint find the eslintrc when it's placed in a subfolder
+            workingDirectories = { mode = 'auto' },
+          },
+        },
       }
 
       -- Ensure the servers and tools above are installed
@@ -612,12 +681,13 @@ require('lazy').setup({
       --    :Mason
       --
       -- You can press `g?` for help in this menu.
-      local ensure_installed = vim.tbl_keys(servers or {})
-      vim.list_extend(ensure_installed, {
-        'lua_ls', -- Lua Language server
-        'stylua', -- Used to format Lua code
-        -- You can add other tools here that you want Mason to install
-      })
+      local ensure_installed = {
+        'lua-language-server', -- Lua LSP
+        'stylua', -- Lua formatter
+        'prettierd', -- Fast prettier daemon
+        'typescript-language-server', -- TypeScript/JavaScript LSP
+        'eslint-lsp', -- ESLint LSP
+      }
 
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
@@ -686,11 +756,56 @@ require('lazy').setup({
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
-        -- Conform can also run multiple formatters sequentially
-        -- python = { "isort", "black" },
-        --
-        -- You can use 'stop_after_first' to run the first available formatter from the list
-        -- javascript = { "prettierd", "prettier", stop_after_first = true },
+        javascript = { 'prettierd', 'prettier', stop_after_first = true },
+        javascriptreact = { 'prettierd', 'prettier', stop_after_first = true },
+        typescript = { 'prettierd', 'prettier', stop_after_first = true },
+        typescriptreact = { 'prettierd', 'prettier', stop_after_first = true },
+        json = { 'prettierd', 'prettier', stop_after_first = true },
+        jsonc = { 'prettierd', 'prettier', stop_after_first = true },
+        css = { 'prettierd', 'prettier', stop_after_first = true },
+        html = { 'prettierd', 'prettier', stop_after_first = true },
+        yaml = { 'prettierd', 'prettier', stop_after_first = true },
+        markdown = { 'prettierd', 'prettier', stop_after_first = true },
+      },
+      formatters = {
+        prettierd = {
+          -- Only run prettier if a config file exists in the project
+          condition = function(_, ctx)
+            return vim.fs.find({
+              '.prettierrc',
+              '.prettierrc.json',
+              '.prettierrc.yml',
+              '.prettierrc.yaml',
+              '.prettierrc.json5',
+              '.prettierrc.js',
+              '.prettierrc.cjs',
+              '.prettierrc.mjs',
+              '.prettierrc.toml',
+              'prettier.config.js',
+              'prettier.config.cjs',
+              'prettier.config.mjs',
+            }, { path = ctx.filename, upward = true })[1] ~= nil
+          end,
+        },
+        prettier = {
+          -- Only run prettier if a config file exists in the project
+          condition = function(_, ctx)
+            return vim.fs.find({
+              '.prettierrc',
+              '.prettierrc.json',
+              '.prettierrc.yml',
+              '.prettierrc.yaml',
+              '.prettierrc.json5',
+              '.prettierrc.js',
+              '.prettierrc.cjs',
+              '.prettierrc.mjs',
+              '.prettierrc.toml',
+              'prettier.config.js',
+              'prettier.config.cjs',
+              'prettier.config.mjs',
+            }, { path = ctx.filename, upward = true })[1] ~= nil
+          end,
+        },
       },
     },
   },
@@ -750,7 +865,7 @@ require('lazy').setup({
         -- <c-k>: Toggle signature help
         --
         -- See :h blink-cmp-config-keymap for defining your own keymap
-        preset = 'default',
+        preset = 'enter',
 
         -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
         --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
@@ -870,9 +985,9 @@ require('lazy').setup({
   --  Here are some example plugins that I've included in the Kickstart repository.
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
-  -- require 'kickstart.plugins.debug',
+  require 'kickstart.plugins.debug',
   -- require 'kickstart.plugins.indent_line',
-  -- require 'kickstart.plugins.lint',
+  require 'kickstart.plugins.lint',
   -- require 'kickstart.plugins.autopairs',
   -- require 'kickstart.plugins.neo-tree',
   -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
