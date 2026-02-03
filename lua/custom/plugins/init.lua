@@ -12,7 +12,26 @@ return {
   {
     'tpope/vim-fugitive',
     config = function()
-      vim.keymap.set('n', '<leader>gs', '<cmd>vertical Git<CR>')
+      vim.keymap.set('n', '<leader>gs', function()
+        vim.cmd('vertical Git')
+        local width = math.floor(vim.o.columns * 0.3)
+        vim.cmd('vertical resize ' .. width)
+      end)
+      vim.keymap.set('n', '<leader>gp', '<cmd>Git pull<CR>')
+      vim.keymap.set('n', '<leader>gP', '<cmd>Git push<CR>')
     end,
+  },
+  {
+    'greggh/claude-code.nvim',
+    dependencies = {
+      'nvim-lua/plenary.nvim', -- Required for git operations
+    },
+    -- config = function()
+    --   require('claude-code').setup {
+    --     window = {
+    --       position = 'vertical',
+    --     },
+    --   }
+    -- end,
   },
 }
