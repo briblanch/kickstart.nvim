@@ -9,24 +9,25 @@
 --
 -- This generates buildServer.json which allows sourcekit-lsp to understand your project.
 
-return {
-  {
-    'wojciechkulik/xcodebuild.nvim',
-    dependencies = {
-      'nvim-telescope/telescope.nvim',
-      'MunifTanjim/nui.nvim',
-      'nvim-treesitter/nvim-treesitter',
-    },
-    opts = {
-      logs = {
-        auto_open_on_success_tests = false,
-        auto_open_on_failed_tests = false,
-        auto_open_on_success_build = false,
-        auto_open_on_failed_build = true,
-      },
-      code_coverage = {
-        enabled = true,
-      },
-    },
-  },
-}
+-- return {
+--   {
+--     'wojciechkulik/xcodebuild.nvim',
+--     dependencies = {
+--       'nvim-telescope/telescope.nvim',
+--       'MunifTanjim/nui.nvim',
+--       'nvim-treesitter/nvim-treesitter',
+--     },
+--     opts = {
+--       logs = {
+--         auto_open_on_success_tests = false,
+--         auto_open_on_failed_tests = false,
+--         auto_open_on_success_build = false,
+--         auto_open_on_failed_build = true,
+--       },
+--       code_coverage = {
+--         enabled = true,
+--       },
+--     },
+--   },
+-- }
+return {}
